@@ -34,17 +34,23 @@ jobs:
             echo 'Required URL secrets are missing'
             exit 1
           fi
-          site_code=$(curl --location --silent --show-error --max-time 15 --retry 1 --retry-delay 2 --output /dev/null --write-out '%{http_code}' "$SITE_URL")
+          site_code=$(curl --location --silent --max-time 15 --retry 1 --retry-delay 2 --output /dev/null --write-out '%{http_code}' "$SITE_URL") || {
+            echo 'Production site request failed'
+            exit 1
+          }
           if [[ "$site_code" != "200" ]]; then
             echo "Production site returned HTTP $site_code"
             exit 1
           fi
-          health_code=$(curl --location --silent --show-error --max-time 15 --retry 1 --retry-delay 2 --output health.json --write-out '%{http_code}' "$HEALTH_URL")
+          health_code=$(curl --location --silent --max-time 15 --retry 1 --retry-delay 2 --output health.json --write-out '%{http_code}' "$HEALTH_URL") || {
+            echo 'Health request failed'
+            exit 1
+          }
           if [[ "$health_code" != "200" ]]; then
             echo "API health returned HTTP $health_code"
             exit 1
           fi
-          if ! jq -e '.ok == true' health.json > /dev/null; then
+          if ! jq -e '.ok == true' health.json > /dev/null 2>&1; then
             echo 'Health response did not report a healthy state'
             exit 1
           fi
